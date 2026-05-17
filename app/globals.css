@@ -34,11 +34,20 @@
   font-weight: 200;
 }
 
+@font-face {
+  font-family: "Assistant Bold";
+  src: url("/fonts/assistant-bold.ttf") format("truetype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 700;
+}
+
 :root {
   --ink: 16 30 16;
   --paper: 244 241 232;
   --font-pixel: "Hebrew Pixel", "Arial Hebrew", "Noto Sans Hebrew", Arial, sans-serif;
   --font-assistant: "Assistant Hero", "Assistant", "Arial Hebrew", "Noto Sans Hebrew", Arial, sans-serif;
+  --font-assistant-bold: "Assistant Bold", "Arial Hebrew", "Noto Sans Hebrew", Arial, sans-serif;
 }
 
 * {
@@ -46,6 +55,7 @@
 }
 
 html {
+  font-size: 14px;
   background: rgb(var(--paper));
   color: rgb(var(--ink));
   scroll-behavior: auto;
@@ -70,9 +80,15 @@ body::-webkit-scrollbar {
   display: none;
 }
 
-button,
-a {
+button {
   font: inherit;
+}
+
+.type-assistant-bold {
+  font-family: var(--font-assistant-bold);
+  font-weight: 700;
+  font-style: normal;
+  font-synthesis: none;
 }
 
 ::selection {
@@ -145,7 +161,7 @@ a {
   gap: 0.55rem;
   color: rgb(var(--ink));
   font-family: var(--font-assistant);
-  font-size: clamp(1.35rem, 2.1vw, 2rem);
+  font-size: clamp(0.8rem, 1.2vw, 0.95rem);
   font-weight: 200;
   line-height: 1;
   white-space: nowrap;
@@ -153,13 +169,13 @@ a {
 
 .trusted-mark {
   display: grid;
-  width: 2rem;
-  height: 2rem;
+  width: 1.35rem;
+  height: 1.35rem;
   place-items: center;
   border: 1px solid rgba(16, 30, 16, 0.22);
   border-radius: 999px;
   background: rgba(248, 246, 237, 0.34);
-  font-size: 1rem;
+  font-size: 0.65rem;
 }
 
 .scroll-cue-dot {

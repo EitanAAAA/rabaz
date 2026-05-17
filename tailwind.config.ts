@@ -16,6 +16,13 @@ const config: Config = {
           "Arial",
           "sans-serif"
         ],
+        "assistant-bold": [
+          "Assistant Bold",
+          "Arial Hebrew",
+          "Noto Sans Hebrew",
+          "Arial",
+          "sans-serif"
+        ],
         pixel: [
           "Hebrew Pixel",
           "Arial Hebrew",

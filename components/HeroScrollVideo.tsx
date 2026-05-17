@@ -218,7 +218,10 @@ export default function HeroScrollVideo() {
           })
       );
 
-      const fontPromise = document.fonts.ready.then(() => updateProgress());
+      const fontPromise = Promise.all([
+        document.fonts.load('700 1rem "Assistant Bold"'),
+        document.fonts.ready
+      ]).then(() => updateProgress());
       await Promise.all([...framePromises, fontPromise]);
       if (!isMounted) return;
 
@@ -335,19 +338,19 @@ export default function HeroScrollVideo() {
         <nav
           ref={navRef}
           dir="ltr"
-          className="hero-nav absolute left-1/2 top-5 z-30 grid w-[calc(100%-48px)] max-w-6xl -translate-x-1/2 grid-cols-[1fr_auto_1fr] items-center px-1 py-1 font-assistant text-[15px] font-extralight tracking-normal text-[#102010]"
+          className="hero-nav absolute left-1/2 top-5 z-30 grid w-[calc(100%-48px)] max-w-6xl -translate-x-1/2 grid-cols-[1fr_auto_1fr] items-center px-1 py-1 font-assistant text-xs font-extralight tracking-normal text-[#102010]"
         >
           <div className="justify-self-start" dir="rtl">
             <div className="hidden items-center gap-2 sm:flex">
               <a
                 href="#"
-                className="rounded-full border border-black/10 bg-[#f8f6ed]/58 px-4 py-2 text-[13px] text-[#102010] backdrop-blur-sm transition-[background,transform] duration-300 hover:-translate-y-0.5 hover:bg-[#f8f6ed]/85"
+                className="rounded-full border border-black/10 bg-[#f8f6ed]/58 px-3 py-1.5 text-[10px] text-[#102010] backdrop-blur-sm transition-[background,transform] duration-300 hover:-translate-y-0.5 hover:bg-[#f8f6ed]/85"
               >
                 צפייה
               </a>
               <a
                 href="#"
-                className="rounded-full bg-[#102010] px-5 py-2 text-[13px] text-[#f8f6ed] transition-transform duration-300 hover:-translate-y-0.5 hover:scale-[1.02]"
+                className="rounded-full bg-[#102010] px-3.5 py-1.5 text-[10px] text-[#f8f6ed] transition-transform duration-300 hover:-translate-y-0.5 hover:scale-[1.02]"
               >
                 התחלה
               </a>
@@ -358,17 +361,17 @@ export default function HeroScrollVideo() {
             <span className="relative grid h-8 w-8 place-items-center overflow-hidden rounded-full bg-[#102010]">
               <NextImage src="/logo-rabbanut.png" alt="" width={32} height={32} className="h-full w-full object-cover" />
             </span>
-            <span className="hidden text-lg font-extralight sm:block">הרבנות הצבאית</span>
+            <span className="type-assistant-bold hidden text-sm sm:block">הרבנות הצבאית</span>
           </a>
 
           <div className="flex items-center gap-5 justify-self-end md:gap-7" dir="rtl">
-            <a className="nav-link-underline" href="#">
+            <a className="nav-link-underline type-assistant-bold" href="#">
               בית
             </a>
-            <a className="nav-link-underline hidden sm:inline" href="#">
+            <a className="nav-link-underline type-assistant-bold hidden sm:inline" href="#">
               אודות
             </a>
-            <a className="nav-link-underline hidden sm:inline" href="#">
+            <a className="nav-link-underline type-assistant-bold hidden sm:inline" href="#">
               קשר
             </a>
           </div>
@@ -376,17 +379,17 @@ export default function HeroScrollVideo() {
 
         <div className="pointer-events-none relative z-20 flex h-full items-start justify-center px-5 pt-[16vh] text-center sm:pt-[14vh] lg:pt-[12vh]">
           <div ref={copyRef} className="hero-copy w-full max-w-[1160px] origin-top">
-            <h1 className="mx-auto max-w-[1040px] text-balance font-assistant text-[2.8rem] font-extralight leading-[0.95] tracking-normal text-[#102010] sm:text-[4.8rem] md:text-[5.9rem] lg:text-[6.8rem] xl:text-[7.5rem]">
+            <h1 className="type-assistant-bold mx-auto max-w-[1040px] text-balance text-[1.65rem] leading-[1.05] tracking-normal text-[#102010] sm:text-[2.35rem] md:text-[2.85rem] lg:text-[3.2rem] xl:text-[3.5rem]">
               ברוכים הבאים למשפחת הרבנות הצבאית
             </h1>
             <p
               ref={subtitleRef}
-              className="mx-auto mt-4 max-w-2xl text-balance font-assistant text-2xl font-extralight leading-[1.25] tracking-normal text-[#102010]/82 sm:text-3xl lg:text-[2.2rem]"
+              className="mx-auto mt-3 max-w-2xl text-balance font-assistant text-sm font-extralight leading-[1.3] tracking-normal text-[#102010]/82 sm:text-base lg:text-lg"
             >
               חווית אתר שלא נראתה בצה״ל
             </p>
             <div ref={trustedRef} className="mx-auto mt-4 max-w-5xl overflow-hidden sm:mt-5">
-              <p className="font-assistant text-sm font-extralight tracking-[0.22em] text-[#102010]/62">
+              <p className="font-assistant text-[10px] font-extralight tracking-[0.18em] text-[#102010]/62">
                 נאמנים על ידי
               </p>
               <div className="trusted-marquee mt-5">
@@ -405,7 +408,7 @@ export default function HeroScrollVideo() {
 
         <div
           ref={scrollCueRef}
-          className="scroll-cue pointer-events-none absolute bottom-7 left-1/2 z-30 flex -translate-x-1/2 flex-col items-center gap-2 font-assistant text-sm font-extralight text-[#102010]/80 sm:bottom-8"
+          className="scroll-cue pointer-events-none absolute bottom-7 left-1/2 z-30 flex -translate-x-1/2 flex-col items-center gap-1.5 font-assistant text-[10px] font-extralight text-[#102010]/80 sm:bottom-8"
           aria-hidden="true"
         >
           <div className="relative h-11 w-7 rounded-full border border-[#102010]/45 bg-[#f8f6ed]/22 backdrop-blur-sm">
@@ -421,7 +424,7 @@ export default function HeroScrollVideo() {
           aria-hidden={isReady}
         >
           <div className="absolute bottom-8 left-8 font-assistant text-[#102010] sm:bottom-10 sm:left-10">
-            <div className="text-[4rem] font-extralight leading-none tracking-normal sm:text-[6.5rem]">
+            <div className="text-[2.25rem] font-extralight leading-none tracking-normal sm:text-[3.25rem]">
               {displayedProgress}
             </div>
             <div className="mt-3 h-px w-40 overflow-hidden bg-[#102010]/12">
