@@ -1,0 +1,210 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "Hebrew Pixel";
+  src: url("/fonts/hebrew-pixel.otf") format("opentype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: "Hebrew Pixel";
+  src: url("/fonts/hebrew-pixel.otf") format("opentype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 600;
+}
+
+@font-face {
+  font-family: "Hebrew Pixel";
+  src: url("/fonts/hebrew-pixel.otf") format("opentype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 800;
+}
+
+@font-face {
+  font-family: "Assistant Hero";
+  src: url("/fonts/assistant-extra-light.ttf") format("truetype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 200;
+}
+
+:root {
+  --ink: 16 30 16;
+  --paper: 244 241 232;
+  --font-pixel: "Hebrew Pixel", "Arial Hebrew", "Noto Sans Hebrew", Arial, sans-serif;
+  --font-assistant: "Assistant Hero", "Assistant", "Arial Hebrew", "Noto Sans Hebrew", Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: rgb(var(--paper));
+  color: rgb(var(--ink));
+  scroll-behavior: auto;
+  scrollbar-width: none;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+  background: rgb(var(--paper));
+  font-family: var(--font-assistant);
+  color: rgb(var(--ink));
+  font-synthesis-weight: auto;
+  text-rendering: geometricPrecision;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
+}
+
+button,
+a {
+  font: inherit;
+}
+
+::selection {
+  background: rgba(16, 30, 16, 0.16);
+}
+
+.hero-scroll {
+  min-height: 100vh;
+}
+
+.hero-canvas,
+.hero-video {
+  backface-visibility: hidden;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+}
+
+.hero-copy,
+.hero-nav,
+.scroll-cue {
+  will-change: transform, opacity;
+}
+
+.nav-link-underline {
+  position: relative;
+  display: inline-flex;
+  padding-block: 0.35rem;
+  color: rgb(var(--ink));
+  text-decoration: none;
+}
+
+.nav-link-underline::after {
+  position: absolute;
+  right: 0;
+  bottom: 0.1rem;
+  width: 100%;
+  height: 1px;
+  content: "";
+  background: currentColor;
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+.nav-link-underline:hover::after {
+  opacity: 0.85;
+  transform: scaleX(1);
+}
+
+.trusted-marquee {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+
+.trusted-track {
+  display: flex;
+  width: max-content;
+  align-items: center;
+  gap: 3.25rem;
+  animation: trustedMarquee 18s linear infinite;
+}
+
+.trusted-logo {
+  display: inline-flex;
+  min-width: max-content;
+  align-items: center;
+  gap: 0.55rem;
+  color: rgb(var(--ink));
+  font-family: var(--font-assistant);
+  font-size: clamp(1.35rem, 2.1vw, 2rem);
+  font-weight: 200;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.trusted-mark {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 1px solid rgba(16, 30, 16, 0.22);
+  border-radius: 999px;
+  background: rgba(248, 246, 237, 0.34);
+  font-size: 1rem;
+}
+
+.scroll-cue-dot {
+  animation: scrollCue 1.45s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+@keyframes trustedMarquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(50%);
+  }
+}
+
+@keyframes scrollCue {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+
+  35% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .hero-copy,
+  .hero-nav,
+  .scroll-cue,
+  .trusted-track,
+  .hero-canvas,
+  .hero-video {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
