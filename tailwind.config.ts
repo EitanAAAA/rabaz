@@ -7,41 +7,29 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      colors: {
+        "canvas-ice": "#f4f4f1",
+        "adaline-ink": "#080808",
+        "mist-gray": "#b9b9b4",
+        "deep-earth": "#1b1b1b",
+        "valley-green": "#2d2d2d",
+        "stone-moss": "#d7d7d2",
+        "amber-seed": "#050505",
+        "forest-dew": "#e9e9e4",
+        "blackest-night": "#000000"
+      },
       fontFamily: {
         assistant: [
-          "Assistant Hero",
-          "Assistant",
-          "Arial Hebrew",
-          "Noto Sans Hebrew",
-          "Arial",
-          "sans-serif"
+          "var(--font-akkurat)"
         ],
         "assistant-bold": [
-          "Assistant Bold",
-          "Arial Hebrew",
-          "Noto Sans Hebrew",
-          "Arial",
-          "sans-serif"
+          "var(--font-akkurat)"
         ],
         pixel: [
-          "Hebrew Pixel",
-          "Arial Hebrew",
-          "Noto Sans Hebrew",
-          "Arial",
-          "sans-serif"
+          "var(--font-fragmentmono)"
         ],
         sans: [
-          "Hebrew Pixel",
-          "Arial Hebrew",
-          "Noto Sans Hebrew",
-          "Inter",
-          "Geist",
-          "ui-sans-serif",
-          "system-ui",
-          "-apple-system",
-          "BlinkMacSystemFont",
-          "Segoe UI",
-          "sans-serif"
+          "var(--font-akkurat)"
         ]
       }
     }
