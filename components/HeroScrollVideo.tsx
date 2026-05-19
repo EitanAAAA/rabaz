@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import NextImage from "next/image";
-import BranchesCarousel from "@/components/BranchesCarousel";
+import OrgChart3DSplitPreview from "@/components/OrgChart3DSplitPreview";
+import PictureArcStacks from "@/components/PictureArcStacks";
 import { FramePreloader } from "@/lib/FramePreloader";
 import {
   dispatchHeroFrameChange,
@@ -29,7 +30,7 @@ export default function HeroScrollVideo() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const navRef = useRef<HTMLElement | null>(null);
   const copyRef = useRef<HTMLDivElement | null>(null);
-  const branchesRef = useRef<HTMLDivElement | null>(null);
+  const orgChartRef = useRef<HTMLDivElement | null>(null);
   const frameImagesRef = useRef<HTMLImageElement[]>([]);
   const currentFrameRef = useRef(0);
   const loadingProgressRef = useRef(0);
@@ -71,23 +72,6 @@ export default function HeroScrollVideo() {
     });
     lenis.stop();
     lenisRef.current = lenis;
-
-    ScrollTrigger.scrollerProxy(document.documentElement, {
-      scrollTop(value) {
-        if (arguments.length && typeof value === "number") {
-          lenis.scrollTo(value, { immediate: true });
-        }
-        return lenis.scroll;
-      },
-      getBoundingClientRect() {
-        return {
-          top: 0,
-          left: 0,
-          width: window.innerWidth,
-          height: window.innerHeight
-        };
-      }
-    });
 
     lenis.on("scroll", ScrollTrigger.update);
 
@@ -166,16 +150,6 @@ export default function HeroScrollVideo() {
       context.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
     };
 
-    const readScrollProgress = () => {
-      const section = sectionRef.current;
-      if (!section) return 0;
-
-      const scrollY = lenis.scroll;
-      const start = section.offsetTop;
-      const scrollable = Math.max(1, section.offsetHeight - window.innerHeight);
-      return gsap.utils.clamp(0, 1, (scrollY - start) / scrollable);
-    };
-
     const syncFrame = (progress: number) => {
       const clampedProgress = gsap.utils.clamp(0, 1, progress);
       const frameIndex = frameIndexFromProgress(clampedProgress);
@@ -220,7 +194,7 @@ export default function HeroScrollVideo() {
         setIsReady(true);
         document.body.style.overflow = previousOverflow;
         ScrollTrigger.refresh(true);
-        applyProgress(readScrollProgress());
+        applyProgress(scrollTrigger?.progress ?? 0);
       }, 600);
     };
 
@@ -249,7 +223,7 @@ export default function HeroScrollVideo() {
       scrollTrigger?.kill();
       timeline?.kill();
 
-      const fadeTargets = [copyRef.current, navRef.current, branchesRef.current].filter(Boolean);
+      const fadeTargets = [copyRef.current, navRef.current, orgChartRef.current].filter(Boolean);
 
       gsap.set(fadeTargets, {
         autoAlpha: 1,
@@ -265,19 +239,22 @@ export default function HeroScrollVideo() {
         .to(navRef.current, { y: -14, scale: 0.9, autoAlpha: 0, duration: 0.5, ease: "none" }, 0)
         .to(canvasRef.current, { scale: 1.08, yPercent: -1.2, duration: 1, ease: "none" }, 0);
 
-      if (branchesRef.current) {
-        timeline.to(branchesRef.current, { y: -12, scale: 0.94, autoAlpha: 0, duration: 0.55, ease: "none" }, 0.02);
+      if (orgChartRef.current) {
+        timeline.to(orgChartRef.current, { y: -12, scale: 0.94, autoAlpha: 0, duration: 0.55, ease: "none" }, 0.02);
       }
 
       scrollTrigger = ScrollTrigger.create({
         trigger: sectionRef.current,
         start: "top top",
-        end: "bottom bottom",
+        end: () => {
+          const sectionHeight = sectionRef.current?.offsetHeight ?? window.innerHeight;
+          return `+=${Math.max(1, sectionHeight - window.innerHeight)}`;
+        },
         scrub: reduceMotion ? false : true,
         invalidateOnRefresh: true,
-        onUpdate: () => {
+        onUpdate: (self) => {
           if (reduceMotion || !isReadyRef.current) return;
-          applyProgress(readScrollProgress());
+          applyProgress(self.progress);
         },
         onLeave: () => applyProgress(1),
         onEnterBack: () => applyProgress(1),
@@ -303,7 +280,7 @@ export default function HeroScrollVideo() {
     const handleResize = () => {
       renderFrame(currentFrameRef.current);
       ScrollTrigger.refresh(true);
-      if (isReadyRef.current) applyProgress(readScrollProgress());
+      if (isReadyRef.current) applyProgress(scrollTrigger?.progress ?? 0);
     };
 
     resizeObserver = new ResizeObserver(handleResize);
@@ -319,7 +296,6 @@ export default function HeroScrollVideo() {
       cancelAnimationFrame(lenisRafId);
       lenis.destroy();
       lenisRef.current = null;
-      ScrollTrigger.scrollerProxy(document.documentElement, {});
       resizeObserver?.disconnect();
       window.removeEventListener("resize", handleResize);
       scrollTrigger?.kill();
@@ -347,7 +323,6 @@ export default function HeroScrollVideo() {
             <span className="hero-header-logo">
               <NextImage src="/logo-rabbanut.png" alt="הרבנות הצבאית" width={72} height={72} priority />
             </span>
-            <span className="hero-header-title">הרבנות הצבאית</span>
           </a>
 
           <nav className="hero-header-links" aria-label="ניווט ראשי">
@@ -357,14 +332,19 @@ export default function HeroScrollVideo() {
           </nav>
         </header>
 
-        <div className="pointer-events-none relative z-20 flex h-full items-start justify-center px-5 pt-[13.5vh] text-center sm:pt-[12vh] lg:pt-[10vh]">
+        <div className="pointer-events-none relative z-20 flex h-full items-start justify-center px-5 pt-[1.15rem] text-center sm:pt-[1rem] lg:pt-[0.95rem]">
           <div ref={copyRef} className="hero-copy w-full max-w-[1320px] origin-top">
-            <h1 className="hero-heading mx-auto max-w-[1260px]">ברוכים הבאים למשפחת הרבנות הצבאית</h1>
-            <p className="hero-branches-label">סוגי הענפים</p>
-            <div ref={branchesRef} className="mx-auto max-w-4xl">
-              <BranchesCarousel />
+            <PictureArcStacks />
+            <div ref={orgChartRef} className="mx-auto mt-1 max-w-5xl">
+              <OrgChart3DSplitPreview />
             </div>
           </div>
+        </div>
+
+        <div className="hero-scroll-cue" aria-hidden="true">
+          <span className="hero-scroll-mouse">
+            <span className="hero-scroll-dot" />
+          </span>
         </div>
       </div>
 
