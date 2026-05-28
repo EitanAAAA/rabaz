@@ -1,16 +1,15 @@
 ﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
-import NextImage from "next/image";
-import OrgChart3DSplitPreview from "@/components/OrgChart3DSplitPreview";
-import PictureArcStacks from "@/components/PictureArcStacks";
+import { FallingHeroImages, KnowledgeHeroOverlay } from "@/components/KnowledgeLandingHero";
+import { HeroParallaxFrame } from "@/components/HeroParallaxFrame";
+import { HeroVideoDialog } from "@/components/magicui/hero-video-dialog";
 import { FramePreloader } from "@/lib/FramePreloader";
 import {
   dispatchHeroFrameChange,
   frameIndexFromProgress,
   framePath,
-  FRAME_COUNT,
-  FRAME_DURATION
+  FRAME_COUNT
 } from "@/lib/heroFrames";
 import Lenis from "lenis";
 import gsap from "gsap";
@@ -18,7 +17,9 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const SCROLL_VH_PER_SECOND = 90;
+const SCROLL_PX_PER_FRAME = 16;
+const OLD_FRAME_COUNT = 302;
+const scaleFrame = (frame: number) => (frame / OLD_FRAME_COUNT) * FRAME_COUNT;
 
 export default function HeroScrollVideo() {
   const [loadingProgress, setLoadingProgress] = useState(0);
@@ -27,14 +28,17 @@ export default function HeroScrollVideo() {
   const isReadyRef = useRef(false);
   const sectionRef = useRef<HTMLElement | null>(null);
   const pinRef = useRef<HTMLDivElement | null>(null);
+  const frameShellRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const navRef = useRef<HTMLElement | null>(null);
   const copyRef = useRef<HTMLDivElement | null>(null);
-  const orgChartRef = useRef<HTMLDivElement | null>(null);
+  const botStageRef = useRef<HTMLDivElement | null>(null);
   const frameImagesRef = useRef<HTMLImageElement[]>([]);
   const currentFrameRef = useRef(0);
   const loadingProgressRef = useRef(0);
   const lenisRef = useRef<Lenis | null>(null);
+  const isImageStackHoveredRef = useRef(false);
+  const imageExitProgressRef = useRef(0);
 
   useEffect(() => {
     loadingProgressRef.current = loadingProgress;
@@ -62,7 +66,6 @@ export default function HeroScrollVideo() {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const previousOverflow = document.body.style.overflow;
     history.scrollRestoration = "manual";
-    document.body.style.overflow = "hidden";
     window.scrollTo(0, 0);
 
     const lenis = new Lenis({
@@ -75,13 +78,11 @@ export default function HeroScrollVideo() {
 
     lenis.on("scroll", ScrollTrigger.update);
 
-    let lenisRafId = 0;
-    const raf = (time: number) => {
-      lenis.raf(time);
-      lenisRafId = requestAnimationFrame(raf);
+    const lenisTicker = (time: number) => {
+      lenis.raf(time * 1000);
     };
 
-    lenisRafId = requestAnimationFrame(raf);
+    gsap.ticker.add(lenisTicker);
     gsap.ticker.lagSmoothing(0);
 
     const canvas = canvasRef.current;
@@ -90,6 +91,7 @@ export default function HeroScrollVideo() {
     let resizeObserver: ResizeObserver | undefined;
     let scrollTrigger: ScrollTrigger | undefined;
     let timeline: gsap.core.Timeline | undefined;
+    let imageHoverCleanup: (() => void) | undefined;
 
     const ensureImage = (frameIndex: number) => {
       const existing = frameImagesRef.current[frameIndex];
@@ -144,7 +146,7 @@ export default function HeroScrollVideo() {
       } else {
         drawWidth = canvas.width;
         drawHeight = drawWidth / imageRatio;
-        offsetY = (canvas.height - drawHeight) / 2;
+        offsetY = canvas.height - drawHeight;
       }
 
       context.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
@@ -168,10 +170,96 @@ export default function HeroScrollVideo() {
       }
     };
 
+    const syncImageExit = (exitProgress: number) => {
+      const section = sectionRef.current;
+      if (!section) return;
+
+      const cards = section.querySelectorAll<HTMLElement>(".hero-falling-card");
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const hoverProgress = exitProgress < 0.06 && isImageStackHoveredRef.current ? 1 : 0;
+
+      cards.forEach((card) => {
+        const cardHeight = card.offsetHeight || 1;
+        const fallIndex = Number((card.dataset.index ?? card.style.getPropertyValue("--fall-index")) || 0);
+        const side = fallIndex % 2 === 0 ? 1 : -1;
+        const depth = 0.68 + (fallIndex % 6) * 0.055;
+        const hoverX = side * viewportWidth * (0.08 + (fallIndex % 5) * 0.018) * hoverProgress;
+        const hoverY = -viewportHeight * (0.012 + (fallIndex % 4) * 0.006) * hoverProgress;
+        const driftX = hoverX + side * viewportWidth * depth * exitProgress;
+        const driftY = viewportHeight - cardHeight + hoverY - viewportHeight * (0.035 + (fallIndex % 5) * 0.012) * exitProgress;
+        const rotate = side * ((5 + (fallIndex % 4) * 1.5) * hoverProgress + (8 + (fallIndex % 4) * 2.6) * exitProgress);
+        const scale = 1 + hoverProgress * 0.02 - exitProgress * 0.12;
+        const opacity = 0.98 * (1 - exitProgress);
+
+        card.style.setProperty("opacity", String(opacity), "important");
+        card.style.setProperty("z-index", String(18 + fallIndex));
+        card.style.setProperty(
+          "transform",
+          `translate(calc(-50% + ${driftX}px), ${driftY}px) rotate(${rotate}deg) scale(${scale})`,
+          "important"
+        );
+      });
+    };
+
+    const syncBotVideo = (revealProgress: number, stageVisibility: number) => {
+      const section = sectionRef.current;
+      if (!section) return;
+
+      const zoomEased = gsap.parseEase("power3.out")(revealProgress);
+      const veilEased = gsap.parseEase("power2.in")(revealProgress);
+      const veilOpacity = (1 - veilEased) * 0.9;
+      const playReady = revealProgress > 0.95 && stageVisibility >= 0.999;
+      section.style.setProperty("--hero-bot-video-progress", zoomEased.toFixed(4));
+      section.style.setProperty("--hero-bot-video-veil-opacity", veilOpacity.toFixed(4));
+      section.style.setProperty("--hero-bot-content-opacity", veilEased.toFixed(4));
+      section.style.setProperty("--hero-bot-video-visible", stageVisibility.toFixed(4));
+      section.style.setProperty("--hero-bot-video-play-ready", playReady ? "1" : "0");
+    };
+
     const applyProgress = (progress: number) => {
       const clampedProgress = gsap.utils.clamp(0, 1, progress);
+      const imageExitFrame = scaleFrame(100);
+      const stageFadeInStart = scaleFrame(172);
+      const stageFadeInEnd = scaleFrame(188);
+      const revealStartFrame = scaleFrame(182);
+      const revealEndFrame = scaleFrame(272);
+      const imageExitProgress = gsap.utils.clamp(0, 1, gsap.parseEase("power2.inOut")(clampedProgress / (imageExitFrame / FRAME_COUNT)));
+      const stageVisibility = gsap.utils.clamp(0, 1, (clampedProgress - stageFadeInStart / FRAME_COUNT) / ((stageFadeInEnd - stageFadeInStart) / FRAME_COUNT));
+      const revealProgress = gsap.utils.clamp(0, 1, (clampedProgress - revealStartFrame / FRAME_COUNT) / ((revealEndFrame - revealStartFrame) / FRAME_COUNT));
+      imageExitProgressRef.current = imageExitProgress;
+      sectionRef.current?.style.setProperty("--hero-image-exit", imageExitProgress.toFixed(4));
+      syncImageExit(imageExitProgress);
+      syncBotVideo(revealProgress, stageVisibility);
       timeline?.progress(clampedProgress);
       syncFrame(clampedProgress);
+    };
+
+    const bindImageStackHover = () => {
+      const section = sectionRef.current;
+      if (!section) return () => undefined;
+
+      const cards = Array.from(section.querySelectorAll<HTMLElement>(".hero-falling-card"));
+      const handleEnter = () => {
+        isImageStackHoveredRef.current = true;
+        syncImageExit(imageExitProgressRef.current);
+      };
+      const handleLeave = () => {
+        isImageStackHoveredRef.current = false;
+        syncImageExit(imageExitProgressRef.current);
+      };
+
+      cards.forEach((card) => {
+        card.addEventListener("pointerenter", handleEnter);
+        card.addEventListener("pointerleave", handleLeave);
+      });
+
+      return () => {
+        cards.forEach((card) => {
+          card.removeEventListener("pointerenter", handleEnter);
+          card.removeEventListener("pointerleave", handleLeave);
+        });
+      };
     };
 
     const pushProgress = (percent: number) => {
@@ -218,12 +306,12 @@ export default function HeroScrollVideo() {
     };
 
     const setupScroll = () => {
-      if (!sectionRef.current || !pinRef.current || !copyRef.current || !navRef.current) return;
+      if (!sectionRef.current || !pinRef.current || !frameShellRef.current || !copyRef.current || !navRef.current || !botStageRef.current) return;
 
       scrollTrigger?.kill();
       timeline?.kill();
 
-      const fadeTargets = [copyRef.current, navRef.current, orgChartRef.current].filter(Boolean);
+      const fadeTargets = [copyRef.current, navRef.current].filter(Boolean);
 
       gsap.set(fadeTargets, {
         autoAlpha: 1,
@@ -233,15 +321,53 @@ export default function HeroScrollVideo() {
         transformOrigin: "50% 18%"
       });
 
+      gsap.set(frameShellRef.current, {
+        scale: 1,
+        yPercent: 0,
+        borderBottomLeftRadius: 0,
+        borderBottomRightRadius: 0,
+        boxShadow: "0 0 0 rgba(20,33,17,0)",
+        transformOrigin: "50% 50%"
+      });
+
+      gsap.set(botStageRef.current, {
+        scale: 1,
+        yPercent: 0,
+        transformOrigin: "50% 50%"
+      });
+
+      const heroFadeEnd = Math.max(0.05, 1 - 80 / FRAME_COUNT);
+      const heroTransitionStart = Math.max(0.965, 1 - 10 / FRAME_COUNT);
+      const heroTransitionDuration = 1 - heroTransitionStart;
+
       timeline = gsap.timeline({ paused: true });
       timeline
-        .to(copyRef.current, { yPercent: -9, scale: 0.68, autoAlpha: 0, duration: 0.78, ease: "none" }, 0)
-        .to(navRef.current, { y: -14, scale: 0.9, autoAlpha: 0, duration: 0.5, ease: "none" }, 0)
-        .to(canvasRef.current, { scale: 1.08, yPercent: -1.2, duration: 1, ease: "none" }, 0);
-
-      if (orgChartRef.current) {
-        timeline.to(orgChartRef.current, { y: -12, scale: 0.94, autoAlpha: 0, duration: 0.55, ease: "none" }, 0.02);
-      }
+        .to(copyRef.current, { yPercent: -9, scale: 0.68, autoAlpha: 0, duration: heroFadeEnd, ease: "none" }, 0)
+        .to(navRef.current, { y: -14, scale: 0.9, autoAlpha: 0, duration: heroFadeEnd * 0.64, ease: "none" }, 0)
+        .to(canvasRef.current, { scale: 1.08, yPercent: -1.2, duration: 1, ease: "none" }, 0)
+        .to(
+          frameShellRef.current,
+          {
+            scale: 0.88,
+            yPercent: -7,
+            borderBottomLeftRadius: 44,
+            borderBottomRightRadius: 44,
+            boxShadow: "0 34px 90px rgba(20,33,17,0.16)",
+            duration: heroTransitionDuration,
+            ease: "power2.inOut"
+          },
+          heroTransitionStart
+        )
+        .to(
+          botStageRef.current,
+          {
+            scale: 0.9,
+            yPercent: -7,
+            duration: heroTransitionDuration,
+            ease: "power2.inOut"
+          },
+          heroTransitionStart
+        );
 
       scrollTrigger = ScrollTrigger.create({
         trigger: sectionRef.current,
@@ -273,6 +399,8 @@ export default function HeroScrollVideo() {
       lenis.start();
       applyProgress(0);
       finishLoading();
+      imageHoverCleanup?.();
+      imageHoverCleanup = bindImageStackHover();
     };
 
     void initExperience();
@@ -293,10 +421,11 @@ export default function HeroScrollVideo() {
       abort.abort();
       window.clearInterval(simulatedProgressId);
       document.body.style.overflow = previousOverflow;
-      cancelAnimationFrame(lenisRafId);
+      gsap.ticker.remove(lenisTicker);
       lenis.destroy();
       lenisRef.current = null;
       resizeObserver?.disconnect();
+      imageHoverCleanup?.();
       window.removeEventListener("resize", handleResize);
       scrollTrigger?.kill();
       timeline?.kill();
@@ -307,45 +436,49 @@ export default function HeroScrollVideo() {
     <section
       ref={sectionRef}
       className="hero-scroll relative bg-[var(--color-canvas-ice)] text-[var(--color-adaline-ink)]"
-      style={{ height: `calc(100vh + ${FRAME_DURATION * SCROLL_VH_PER_SECOND}vh)` }}
+      style={{ height: `calc(100svh + ${FRAME_COUNT * SCROLL_PX_PER_FRAME}px)` }}
       dir="rtl"
     >
-      <div ref={pinRef} className="sticky top-0 h-screen w-full overflow-hidden">
-        <div
-          aria-hidden="true"
-          className="hero-mist-overlay pointer-events-none absolute inset-0 z-[2]"
-        />
+      <div ref={pinRef} className="hero-pin sticky top-0 h-screen w-full overflow-hidden">
+        <div ref={frameShellRef} className="hero-frame-shell" aria-hidden="true">
+          <div className="hero-mist-overlay pointer-events-none absolute inset-0 z-[2]" />
+          <HeroParallaxFrame>
+            <canvas ref={canvasRef} className="hero-canvas pointer-events-none absolute inset-0 z-0 h-full w-full" />
+          </HeroParallaxFrame>
+        </div>
 
-        <canvas ref={canvasRef} aria-hidden="true" className="hero-canvas pointer-events-none absolute inset-0 z-0 h-full w-full" />
+        <FallingHeroImages isReady={isReady} />
 
-        <header ref={navRef} className="hero-header">
-          <a href="#" className="hero-header-brand">
-            <span className="hero-header-logo">
-              <NextImage src="/logo-rabbanut.png" alt="הרבנות הצבאית" width={72} height={72} priority />
-            </span>
-          </a>
-
-          <nav className="hero-header-links" aria-label="ניווט ראשי">
-            <a className="hero-header-link" href="#">בית</a>
-            <a className="hero-header-link" href="#">אודות</a>
-            <a className="hero-header-link" href="#">קשר</a>
-          </nav>
-        </header>
-
-        <div className="pointer-events-none relative z-20 flex h-full items-start justify-center px-5 pt-[1.15rem] text-center sm:pt-[1rem] lg:pt-[0.95rem]">
-          <div ref={copyRef} className="hero-copy w-full max-w-[1320px] origin-top">
-            <PictureArcStacks />
-            <div ref={orgChartRef} className="mx-auto mt-1 max-w-5xl">
-              <OrgChart3DSplitPreview />
+        <div ref={botStageRef} className="hero-bot-video-stage">
+          <div className="hero-bot-video-veil" aria-hidden="true" />
+          <div className="hero-bot-video-content">
+            <div className="hero-bot-label">
+              <p className="hero-bot-label__title">הפרוייקט של היום:</p>
+              <img
+                className="hero-bot-label__logo"
+                src="/images/ravbot-logo.png"
+                alt="RavBot"
+                width={1024}
+                height={1024}
+              />
+            </div>
+            <div className="hero-bot-video-dialog">
+              <HeroVideoDialog
+                animationStyle="top-in-bottom-out"
+                videoSrc="/videos/rav-bot.mp4"
+                thumbnailSrc="/videos/rav-bot-poster.jpg"
+                thumbnailAlt="Rav bot video"
+              />
             </div>
           </div>
         </div>
 
-        <div className="hero-scroll-cue" aria-hidden="true">
-          <span className="hero-scroll-mouse">
-            <span className="hero-scroll-dot" />
-          </span>
+        <div className="pointer-events-none relative z-20 h-full w-full">
+          <div ref={copyRef} className="hero-copy hero-knowledge-copy h-full w-full origin-top">
+            <KnowledgeHeroOverlay navRef={navRef} isReady={isReady} showImages={false} />
+          </div>
         </div>
+
       </div>
 
       <div

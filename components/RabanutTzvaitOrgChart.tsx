@@ -208,20 +208,27 @@ function OrgCard({ role, person, imageSrc }: OrgNode) {
 }
 
 function BranchSystemNode({ branch }: { branch: OrgNode }) {
+  const systems = branch.systems;
+  if (!systems) {
+    return (
+      <div className="branch-node">
+        <OrgCard {...branch} />
+      </div>
+    );
+  }
+
   return (
     <div className="branch-node">
       <OrgCard {...branch} />
-      {branch.systems ? (
-        <div className="branch-system-dock" data-system-count={branch.systems.length} aria-label={`מערכות ${branch.role}`}>
-          <span className="branch-system-trunk" aria-hidden="true" />
-          <span className="branch-system-dot" aria-hidden="true" />
-          {branch.systems.map((system) => (
-            <div className="branch-system-node" data-count={branch.systems.length} key={system}>
-              <span className="branch-system-chip">{system}</span>
-            </div>
-          ))}
-        </div>
-      ) : null}
+      <div className="branch-system-dock" data-system-count={systems.length} aria-label={`מערכות ${branch.role}`}>
+        <span className="branch-system-trunk" aria-hidden="true" />
+        <span className="branch-system-dot" aria-hidden="true" />
+        {systems.map((system) => (
+          <div className="branch-system-node" data-count={systems.length} key={system}>
+            <span className="branch-system-chip">{system}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

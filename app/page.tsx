@@ -1,11 +1,13 @@
-import HeroFrameCheckSection from "@/components/HeroFrameCheckSection";
 import HeroScrollVideo from "@/components/HeroScrollVideo";
+import PostVideoOrgSection from "@/components/PostVideoOrgSection";
+import ScrollCapabilitiesSection from "@/components/ScrollCapabilitiesSection";
 
 export default function Home() {
   return (
     <main>
       <HeroScrollVideo />
-      <HeroFrameCheckSection />
+      <ScrollCapabilitiesSection />
+      <PostVideoOrgSection />
     </main>
   );
 }
