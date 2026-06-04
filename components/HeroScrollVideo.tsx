@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
-import { FallingHeroImages, KnowledgeHeroOverlay } from "@/components/KnowledgeLandingHero";
+import { KnowledgeHeroOverlay } from "@/components/KnowledgeLandingHero";
 import { HeroParallaxFrame } from "@/components/HeroParallaxFrame";
 import { HeroVideoDialog } from "@/components/magicui/hero-video-dialog";
 import { FramePreloader } from "@/lib/FramePreloader";
@@ -14,12 +14,26 @@ import {
 import Lenis from "lenis";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { registerLenis } from "@/lib/smoothScroll";
 
 gsap.registerPlugin(ScrollTrigger);
 
 const SCROLL_PX_PER_FRAME = 16;
 const OLD_FRAME_COUNT = 302;
+const HERO_VIDEO_HOLD_PX = 900;
+const FRAME_SCROLL_PX = FRAME_COUNT * SCROLL_PX_PER_FRAME;
+const TOTAL_SCROLL_PX = FRAME_SCROLL_PX + HERO_VIDEO_HOLD_PX;
 const scaleFrame = (frame: number) => (frame / OLD_FRAME_COUNT) * FRAME_COUNT;
+const HOLD_ANCHOR_PROGRESS = scaleFrame(272) / FRAME_COUNT;
+const HOLD_NEW_START = HOLD_ANCHOR_PROGRESS * (FRAME_SCROLL_PX / TOTAL_SCROLL_PX);
+const HOLD_NEW_END = HOLD_NEW_START + HERO_VIDEO_HOLD_PX / TOTAL_SCROLL_PX;
+const PROGRESS_SCALE = TOTAL_SCROLL_PX / FRAME_SCROLL_PX;
+
+const remapHoldProgress = (newProgress: number): number => {
+  if (newProgress <= HOLD_NEW_START) return newProgress * PROGRESS_SCALE;
+  if (newProgress <= HOLD_NEW_END) return HOLD_ANCHOR_PROGRESS;
+  return HOLD_ANCHOR_PROGRESS + (newProgress - HOLD_NEW_END) * PROGRESS_SCALE;
+};
 
 export default function HeroScrollVideo() {
   const [loadingProgress, setLoadingProgress] = useState(0);
@@ -37,8 +51,6 @@ export default function HeroScrollVideo() {
   const currentFrameRef = useRef(0);
   const loadingProgressRef = useRef(0);
   const lenisRef = useRef<Lenis | null>(null);
-  const isImageStackHoveredRef = useRef(false);
-  const imageExitProgressRef = useRef(0);
 
   useEffect(() => {
     loadingProgressRef.current = loadingProgress;
@@ -75,6 +87,7 @@ export default function HeroScrollVideo() {
     });
     lenis.stop();
     lenisRef.current = lenis;
+    registerLenis(lenis);
 
     lenis.on("scroll", ScrollTrigger.update);
 
@@ -91,7 +104,6 @@ export default function HeroScrollVideo() {
     let resizeObserver: ResizeObserver | undefined;
     let scrollTrigger: ScrollTrigger | undefined;
     let timeline: gsap.core.Timeline | undefined;
-    let imageHoverCleanup: (() => void) | undefined;
 
     const ensureImage = (frameIndex: number) => {
       const existing = frameImagesRef.current[frameIndex];
@@ -170,38 +182,6 @@ export default function HeroScrollVideo() {
       }
     };
 
-    const syncImageExit = (exitProgress: number) => {
-      const section = sectionRef.current;
-      if (!section) return;
-
-      const cards = section.querySelectorAll<HTMLElement>(".hero-falling-card");
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      const hoverProgress = exitProgress < 0.06 && isImageStackHoveredRef.current ? 1 : 0;
-
-      cards.forEach((card) => {
-        const cardHeight = card.offsetHeight || 1;
-        const fallIndex = Number((card.dataset.index ?? card.style.getPropertyValue("--fall-index")) || 0);
-        const side = fallIndex % 2 === 0 ? 1 : -1;
-        const depth = 0.68 + (fallIndex % 6) * 0.055;
-        const hoverX = side * viewportWidth * (0.08 + (fallIndex % 5) * 0.018) * hoverProgress;
-        const hoverY = -viewportHeight * (0.012 + (fallIndex % 4) * 0.006) * hoverProgress;
-        const driftX = hoverX + side * viewportWidth * depth * exitProgress;
-        const driftY = viewportHeight - cardHeight + hoverY - viewportHeight * (0.035 + (fallIndex % 5) * 0.012) * exitProgress;
-        const rotate = side * ((5 + (fallIndex % 4) * 1.5) * hoverProgress + (8 + (fallIndex % 4) * 2.6) * exitProgress);
-        const scale = 1 + hoverProgress * 0.02 - exitProgress * 0.12;
-        const opacity = 0.98 * (1 - exitProgress);
-
-        card.style.setProperty("opacity", String(opacity), "important");
-        card.style.setProperty("z-index", String(18 + fallIndex));
-        card.style.setProperty(
-          "transform",
-          `translate(calc(-50% + ${driftX}px), ${driftY}px) rotate(${rotate}deg) scale(${scale})`,
-          "important"
-        );
-      });
-    };
-
     const syncBotVideo = (revealProgress: number, stageVisibility: number) => {
       const section = sectionRef.current;
       if (!section) return;
@@ -218,48 +198,16 @@ export default function HeroScrollVideo() {
     };
 
     const applyProgress = (progress: number) => {
-      const clampedProgress = gsap.utils.clamp(0, 1, progress);
-      const imageExitFrame = scaleFrame(100);
+      const clampedProgress = gsap.utils.clamp(0, 1, remapHoldProgress(progress));
       const stageFadeInStart = scaleFrame(172);
       const stageFadeInEnd = scaleFrame(188);
       const revealStartFrame = scaleFrame(182);
       const revealEndFrame = scaleFrame(272);
-      const imageExitProgress = gsap.utils.clamp(0, 1, gsap.parseEase("power2.inOut")(clampedProgress / (imageExitFrame / FRAME_COUNT)));
       const stageVisibility = gsap.utils.clamp(0, 1, (clampedProgress - stageFadeInStart / FRAME_COUNT) / ((stageFadeInEnd - stageFadeInStart) / FRAME_COUNT));
       const revealProgress = gsap.utils.clamp(0, 1, (clampedProgress - revealStartFrame / FRAME_COUNT) / ((revealEndFrame - revealStartFrame) / FRAME_COUNT));
-      imageExitProgressRef.current = imageExitProgress;
-      sectionRef.current?.style.setProperty("--hero-image-exit", imageExitProgress.toFixed(4));
-      syncImageExit(imageExitProgress);
       syncBotVideo(revealProgress, stageVisibility);
       timeline?.progress(clampedProgress);
       syncFrame(clampedProgress);
-    };
-
-    const bindImageStackHover = () => {
-      const section = sectionRef.current;
-      if (!section) return () => undefined;
-
-      const cards = Array.from(section.querySelectorAll<HTMLElement>(".hero-falling-card"));
-      const handleEnter = () => {
-        isImageStackHoveredRef.current = true;
-        syncImageExit(imageExitProgressRef.current);
-      };
-      const handleLeave = () => {
-        isImageStackHoveredRef.current = false;
-        syncImageExit(imageExitProgressRef.current);
-      };
-
-      cards.forEach((card) => {
-        card.addEventListener("pointerenter", handleEnter);
-        card.addEventListener("pointerleave", handleLeave);
-      });
-
-      return () => {
-        cards.forEach((card) => {
-          card.removeEventListener("pointerenter", handleEnter);
-          card.removeEventListener("pointerleave", handleLeave);
-        });
-      };
     };
 
     const pushProgress = (percent: number) => {
@@ -399,8 +347,6 @@ export default function HeroScrollVideo() {
       lenis.start();
       applyProgress(0);
       finishLoading();
-      imageHoverCleanup?.();
-      imageHoverCleanup = bindImageStackHover();
     };
 
     void initExperience();
@@ -424,8 +370,8 @@ export default function HeroScrollVideo() {
       gsap.ticker.remove(lenisTicker);
       lenis.destroy();
       lenisRef.current = null;
+      registerLenis(null);
       resizeObserver?.disconnect();
-      imageHoverCleanup?.();
       window.removeEventListener("resize", handleResize);
       scrollTrigger?.kill();
       timeline?.kill();
@@ -435,19 +381,18 @@ export default function HeroScrollVideo() {
   return (
     <section
       ref={sectionRef}
+      id="home"
       className="hero-scroll relative bg-[var(--color-canvas-ice)] text-[var(--color-adaline-ink)]"
-      style={{ height: `calc(100svh + ${FRAME_COUNT * SCROLL_PX_PER_FRAME}px)` }}
+      style={{ height: `calc(100svh + ${TOTAL_SCROLL_PX}px)` }}
       dir="rtl"
     >
-      <div ref={pinRef} className="hero-pin sticky top-0 h-screen w-full overflow-hidden">
+      <div ref={pinRef} className="hero-pin sticky top-0 h-[100svh] w-full overflow-hidden">
         <div ref={frameShellRef} className="hero-frame-shell" aria-hidden="true">
           <div className="hero-mist-overlay pointer-events-none absolute inset-0 z-[2]" />
           <HeroParallaxFrame>
             <canvas ref={canvasRef} className="hero-canvas pointer-events-none absolute inset-0 z-0 h-full w-full" />
           </HeroParallaxFrame>
         </div>
-
-        <FallingHeroImages isReady={isReady} />
 
         <div ref={botStageRef} className="hero-bot-video-stage">
           <div className="hero-bot-video-veil" aria-hidden="true" />
@@ -475,7 +420,7 @@ export default function HeroScrollVideo() {
 
         <div className="pointer-events-none relative z-20 h-full w-full">
           <div ref={copyRef} className="hero-copy hero-knowledge-copy h-full w-full origin-top">
-            <KnowledgeHeroOverlay navRef={navRef} isReady={isReady} showImages={false} />
+            <KnowledgeHeroOverlay navRef={navRef} isReady={isReady} />
           </div>
         </div>
 

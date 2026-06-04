@@ -10,6 +10,7 @@ type HeroParallaxFrameProps = PropsWithChildren<{
   tiltX?: number;
   tiltY?: number;
   baseScale?: number;
+  offsetY?: number;
   glare?: boolean;
 }>;
 

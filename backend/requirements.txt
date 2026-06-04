@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+python-multipart
+torch
+torchvision
+transformers
+huggingface-hub>=0.34.0,<1.0
+scikit-learn
+numpy
+pillow
+omegaconf
+safetensors
+fvcore
+opencv-python
